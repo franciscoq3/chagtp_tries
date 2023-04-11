@@ -1,0 +1,56 @@
+select r.uploaded_by,
+       r.file_name,
+       r.file_saved_name,
+       r.file_type,
+       r.uploaded_date,
+       r.first_name,
+       r.last_name,
+       r.email,
+       r.source
+from (select a.uploaded_by,
+             a.file_name,
+             a.file_saved_name,
+             lower(reverse(substring(reverse(file_name), 1, strpos(reverse(file_name), '.') - 1))) file_type,
+             a.uploaded_date,
+             u.first_name,
+             u.last_name,
+             u.email,
+             'ENCOUNTER' as                                                                        source
+      from e e
+               inner join e_a a on e.id = a.encounter_id
+               inner join u u on u.id = a.uploaded_by
+      where e.patient_id = ?
+        and (lower(reverse(substring(reverse(a.file_name), strpos(reverse(a.file_name), '.') + 1))) like ?)
+      union all
+      select a.uploaded_by,
+             a.file_name,
+             a.file_saved_name,
+             lower(reverse(substring(reverse(file_name), 1, strpos(reverse(file_name), '.') - 1))) file_type,
+             a.uploaded_date,
+             u.first_name,
+             u.last_name,
+             u.email,
+             'MESSAGE' as                                                                          source
+      from exmd_topic t
+               inner join t_s s on t.id = s.topic_id
+               inner join u u on s.user_id = u.id
+               inner join m m on t.id = m.topic_id
+               inner join e_a a on m.id = a.message_id
+      where u.id = ?
+        and (lower(reverse(substring(reverse(a.file_name), strpos(reverse(a.file_name), '.') + 1))) like ?)
+      union all
+      select a.uploaded_by,
+             a.file_name,
+             a.file_saved_name,
+             lower(reverse(substring(reverse(file_name), 1, strpos(reverse(file_name), '.') - 1))) file_type,
+             a.uploaded_date,
+             u.first_name,
+             u.last_name,
+             u.email,
+             'PATIENT' as                                                                          source
+      from p p
+               inner join g_a a on p.id = a.patient_id
+               inner join u u on u.id = a.uploaded_by
+      where p.id = ?
+        and (lower(reverse(substring(reverse(a.file_name), strpos(reverse(a.file_name), '.') + 1))) like ?)) as r
+limit ?
